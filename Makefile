@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -std=c99 -g -Wall -fsanitize=address,undefined
 
 debug: mysh.c
-	$(CC) $(CFLAGS) $^ -o mysh-debug
+	$(CC) $(CFLAGS) $< -o mysh-debug
 
 run: mysh.o
 	$(CC) $(CFLAGS) $^ -o mysh
@@ -10,10 +10,6 @@ run: mysh.o
 mysh.o: mysh.c
 	$(CC) $(CFLAGS) -DDEBUG=0 -c $^
 
-clean-all: clean clean-output
-
-clean-output:
+clean:
 	rm -f output.txt
-
-clean: 
-	rm -f mysh *.o
+	rm -f mysh mysh-debug *.o

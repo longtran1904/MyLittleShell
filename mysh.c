@@ -5,6 +5,10 @@
 #include <dirent.h>
 #include <fcntl.h>
 #define BUFSIZE 512
+#define RESET   "\033[0m"
+#define RED     "\033[31m"      /* Red */
+#define GREEN   "\033[32m"      /* Green */
+#define YELLOW  "\033[33m"      /* Yellow */
 
 #ifndef DEBUG
     #define DEBUG 1
@@ -12,39 +16,22 @@
 
 char *lineBuffer;
 int linePos = 0, lineSize = 1;
+int input_fd, output_fd;
 
 void append(char *, int);
 void printCommand(int);
 
-void writeToOutput(char* dname){
+void writeToOutput(){
     int pos;
     char buffer[BUFSIZE];
 
-    // open dir
-    int fd = open(dname, O_RDONLY);
-    if (fd == -1){
-        perror(dname);
-        exit(EXIT_FAILURE);
-    }
-    // open output
-    int output_fd = open("output.txt", O_RDWR | O_CREAT | O_TRUNC, S_IRWXU);
-    if (output_fd == -1){
-        perror("output.txt");
-        exit(EXIT_FAILURE);
-    } else {
-        if (DEBUG) printf("Successfully opened output.txt\n");
-    }
     int readBytes, lstart = 0; // lstart to calculate len of each line
-    while ((readBytes = read(fd, buffer, BUFSIZE)) > 0){
+    while ((readBytes = read(input_fd, buffer, BUFSIZE)) > 0){
         // If a new line, process the line buffer
         for (pos = 0; pos < readBytes; pos++){
             if (buffer[pos] == '\n'){
                 int thislen = pos - lstart + 1;
                 append(buffer + lstart, thislen);
-                if (DEBUG) {
-                    for (int i = 0; i < linePos; i++)
-                        printf("%c", lineBuffer[i]);
-                }
                 printCommand(output_fd);
                 lstart = pos + 1;
                 linePos = 0;
@@ -52,7 +39,7 @@ void writeToOutput(char* dname){
         }
         if (lstart < readBytes){ // if partial line at the end of readBytes
             int thisLen = readBytes - lstart;
-            if (DEBUG) fprintf(stderr, "partial line %d+%d bytes\n", linePos, thisLen);
+            if (DEBUG) fprintf(stderr, YELLOW "partial line %d+%d bytes" RESET "\n", linePos, thisLen);
             append(buffer + lstart, thisLen);
         }
     }
@@ -62,8 +49,8 @@ void writeToOutput(char* dname){
         printCommand(output_fd);
         linePos = 0;
     }
-    close(fd);
-    close(output_fd);
+    close(input_fd);
+    close(output_fd);   
 }
 
 // add specified text the line buffer, expanding as necessary
@@ -75,7 +62,7 @@ void append(char *buf, int len){
     while (newPos > lineSize){
         isExpanded = 1;
         lineSize *= 2;
-        if (DEBUG) fprintf(stderr, "expanding line buffer to %d\n", lineSize);
+        if (DEBUG) fprintf(stderr, YELLOW "expanding line buffer to %d" RESET "\n", lineSize);
     }   
     if (isExpanded) {
         // realloc buffer if resized
@@ -93,29 +80,51 @@ void append(char *buf, int len){
 // Print each command from buffer to file fd
 void printCommand(int fd) {
     int writeBytes = write(fd, lineBuffer, linePos);
-    if (writeBytes == -1) printf("Didn't write any byte!!!\n");
-    else printf("Wrote %d bytes!!\n", writeBytes);
+    if (writeBytes == -1) printf(RED "Didn't write any byte!!!" RESET "\n");
+    else if (DEBUG) printf(YELLOW "Wrote %d bytes!!" RESET "\n", writeBytes);
 }
 
-void interactive(){
-    printf("Need Implemening");
-}
-
-void batch(char* dname){
-
-    writeToOutput(dname);
-    printf("Exit batch mode\n");
+void setupInputOutput(int argc, char** argv){
+    if (argc <= 1)
+    {
+        //set stdin stdout to terminal
+        input_fd = 0;
+        output_fd = 1;
+        if (isatty(input_fd)) // if input_fd is pointing to terminal
+            printf("[Reading from terminal]\n"); 
+    }
+    else
+    {
+        //set stdin stdout to argv[1] and "output.txt"
+        char* dname = argv[1];
+        // open dir
+        int fd;
+        fd = open(dname, O_RDONLY);
+        if (fd == -1){
+            perror(dname);
+            exit(EXIT_FAILURE);
+        } else {
+            input_fd = fd;
+            if (DEBUG) printf(YELLOW "Successfully opened %s" RESET "\n", dname); 
+        }
+        // open output
+        fd = open("output.txt", O_RDWR | O_CREAT | O_TRUNC, S_IRWXU);
+        if (fd == -1){
+            perror("output.txt");
+            exit(EXIT_FAILURE);
+        } else {
+            output_fd = fd;
+            if (DEBUG) printf(YELLOW "Successfully opened output.txt" RESET "\n");
+        }
+    }
 }
 
 int main(int argc, char** argv){
 
-    if (argc <= 1)
-        interactive();
-    else
-    {
-        char* dname = argv[1];
-        batch(dname);
-    }
+    setupInputOutput(argc, argv);
+    writeToOutput();
+    /* FIXME: 
+    Reading and writing in interactive mode meets error when input 2nd line*/
 
     return EXIT_SUCCESS;
 }
