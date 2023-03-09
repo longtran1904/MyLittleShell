@@ -27,10 +27,13 @@ void writeToOutput(){
 
     int readBytes, lstart = 0; // lstart to calculate len of each line
     while ((readBytes = read(input_fd, buffer, BUFSIZE)) > 0){
+        if (DEBUG) printf(YELLOW "Read %d bytes!!" RESET "\n", readBytes);
         // If a new line, process the line buffer
+        lstart = 0;
         for (pos = 0; pos < readBytes; pos++){
             if (buffer[pos] == '\n'){
                 int thislen = pos - lstart + 1;
+                if (DEBUG) fprintf(stderr,GREEN "stream pos: %d | lstart: %d | finished line %d+%d bytes\n" RESET, pos, lstart, linePos, thislen);
                 append(buffer + lstart, thislen);
                 printCommand(output_fd);
                 lstart = pos + 1;
@@ -49,8 +52,7 @@ void writeToOutput(){
         printCommand(output_fd);
         linePos = 0;
     }
-    close(input_fd);
-    close(output_fd);   
+    printf("Program finished reading\n");
 }
 
 // add specified text the line buffer, expanding as necessary
@@ -72,7 +74,6 @@ void append(char *buf, int len){
             exit(EXIT_FAILURE);
         }
     }
-
     memcpy(lineBuffer + linePos, buf, len);
     linePos = newPos;
 }
@@ -123,8 +124,7 @@ int main(int argc, char** argv){
 
     setupInputOutput(argc, argv);
     writeToOutput();
-    /* FIXME: 
-    Reading and writing in interactive mode meets error when input 2nd line*/
-
+    close(input_fd);
+    close(output_fd);   
     return EXIT_SUCCESS;
 }
