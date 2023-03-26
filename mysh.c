@@ -4,6 +4,8 @@
 #include <string.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include "tokenize.c"
+
 #define BUFSIZE 512
 #define RESET   "\033[0m"
 #define RED     "\033[31m"      /* Red */
@@ -20,6 +22,7 @@ int input_fd, output_fd;
 
 void append(char *, int);
 void print();
+void printCommands();
 
 void ReadThenWrite(){
     int pos;
@@ -35,12 +38,14 @@ void ReadThenWrite(){
                 int thislen = pos - lstart + 1;
                 if (DEBUG) fprintf(stderr,GREEN "stream pos: %d | lstart: %d | finished line %d+%d bytes\n" RESET, pos, lstart, linePos, thislen);
                 append(buffer + lstart, thislen);
-                /* 
-                    Add Tokenizer Here
-                    Input: LineBuffer 
-                    Output: Array of Strings
-                */
-                print();
+
+                /* Tokenize each line */
+                char** commands;
+                int count = tokenize(commands, lineBuffer, linePos);
+
+                printCommands(commands, count); // write words in commands
+
+                // reset line buffer
                 lstart = pos + 1;
                 linePos = 0;
             }
@@ -80,7 +85,7 @@ void append(char *buf, int len){
         }
     }
     memcpy(lineBuffer + linePos, buf, len);
-    linePos = newPos;
+    linePos = newPos; // linePos will be reset after print() in ReadThenWrite()
 }
 
 // Print each command from buffer to file fd
@@ -88,6 +93,17 @@ void print() {
     int writeBytes = write(output_fd, lineBuffer, linePos);
     if (writeBytes == -1) printf(RED "Didn't write any byte!!!" RESET "\n");
     else if (DEBUG) printf(YELLOW "Wrote %d bytes!!" RESET "\n", writeBytes);
+}
+// Print each command from buffer to file fd
+void printCommands(char** commands, int count) {
+    int i = 0;
+    printf("List of tokens: \n");
+    while (i < count){
+        printf("[%s]\n", commands[i]);
+        i++;
+        // if (writeBytes == -1) printf(RED "Didn't write any byte!!!" RESET "\n");
+        // else if (DEBUG) printf(YELLOW "Wrote %d bytes!!" RESET "\n", writeBytes);
+    }
 }
 
 void setupInputOutput(int argc, char** argv){
