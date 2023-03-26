@@ -19,9 +19,9 @@ int linePos = 0, lineSize = 1;
 int input_fd, output_fd;
 
 void append(char *, int);
-void printCommand(int);
+void print();
 
-void writeToOutput(){
+void ReadThenWrite(){
     int pos;
     char buffer[BUFSIZE];
 
@@ -35,7 +35,12 @@ void writeToOutput(){
                 int thislen = pos - lstart + 1;
                 if (DEBUG) fprintf(stderr,GREEN "stream pos: %d | lstart: %d | finished line %d+%d bytes\n" RESET, pos, lstart, linePos, thislen);
                 append(buffer + lstart, thislen);
-                printCommand(output_fd);
+                /* 
+                    Add Tokenizer Here
+                    Input: LineBuffer 
+                    Output: Array of Strings
+                */
+                print();
                 lstart = pos + 1;
                 linePos = 0;
             }
@@ -49,7 +54,7 @@ void writeToOutput(){
     if (linePos > 0){
         // file ended with partial line
         append("\n",1);
-        printCommand(output_fd);
+        print();
         linePos = 0;
     }
     printf("Program finished reading\n");
@@ -79,8 +84,8 @@ void append(char *buf, int len){
 }
 
 // Print each command from buffer to file fd
-void printCommand(int fd) {
-    int writeBytes = write(fd, lineBuffer, linePos);
+void print() {
+    int writeBytes = write(output_fd, lineBuffer, linePos);
     if (writeBytes == -1) printf(RED "Didn't write any byte!!!" RESET "\n");
     else if (DEBUG) printf(YELLOW "Wrote %d bytes!!" RESET "\n", writeBytes);
 }
@@ -123,7 +128,7 @@ void setupInputOutput(int argc, char** argv){
 int main(int argc, char** argv){
 
     setupInputOutput(argc, argv);
-    writeToOutput();
+    ReadThenWrite();
     close(input_fd);
     close(output_fd);   
     return EXIT_SUCCESS;
