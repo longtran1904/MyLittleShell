@@ -1,6 +1,10 @@
 #include<ctype.h>
 #include<stdlib.h>
-#define DEBUG 1
+#include<string.h>
+
+#ifndef DEBUG
+    #define DEBUG 0
+#endif
 
 char* buffer;
 int bufsize = 1;
@@ -35,9 +39,9 @@ int tokenize(char** commands, char* string, int strsize){
         word = memcpy(word, string + start, wordlen);
         if (word) {
             word[wordlen] = '\0';
+            commands[commands_count++] = word;
         }
         // if (DEBUG) printf("word: %s\n", word);
-        commands[commands_count++] = word;
         start = i;
     }
     return commands_count;

@@ -1,14 +1,11 @@
 CC = gcc
 CFLAGS = -std=c99 -g -Wall -fsanitize=address,undefined
 
-debug: mysh.c
-	$(CC) $(CFLAGS) $< -o mysh-debug
+debug: mysh.c execution.c tokenize.c
+	$(CC) $(CFLAGS) $^ -DDEBUG=1 -o mysh-debug
 
-run: mysh.o
+run: mysh.c execution.c tokenize.c
 	$(CC) $(CFLAGS) $^ -o mysh
-
-mysh.o: mysh.c
-	$(CC) $(CFLAGS) -DDEBUG=0 -c $^
 
 clean:
 	rm -f output.txt

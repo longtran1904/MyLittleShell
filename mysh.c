@@ -4,7 +4,8 @@
 #include <string.h>
 #include <dirent.h>
 #include <fcntl.h>
-#include "tokenize.c"
+#include "tokenize.h"
+#include "execution.h"
 
 #define BUFSIZE 512
 #define RESET   "\033[0m"
@@ -13,7 +14,7 @@
 #define YELLOW  "\033[33m"      /* Yellow */
 
 #ifndef DEBUG
-    #define DEBUG 1
+    #define DEBUG 0
 #endif
 
 char *lineBuffer;
@@ -40,10 +41,12 @@ void ReadThenWrite(){
                 append(buffer + lstart, thislen);
 
                 /* Tokenize each line */
-                char** commands;
+                char** commands = malloc(BUFSIZE);
                 int count = tokenize(commands, lineBuffer, linePos);
 
-                printCommands(commands, count); // write words in commands
+                if (DEBUG) printCommands(commands, count); // write words in commands
+
+                execute(commands);
 
                 // reset line buffer
                 lstart = pos + 1;
