@@ -1,6 +1,7 @@
-#include<ctype.h>
-#include<stdlib.h>
-#include<string.h>
+#include <ctype.h>
+#include <stdlib.h>
+#include <stdio.h>	
+#include <string.h>
 
 #ifndef DEBUG
     #define DEBUG 0
@@ -13,36 +14,41 @@ int bufsize = 1;
 int tokenize(char** commands, char* string, int strsize){
     int commands_count = 0;
     char* word = NULL;
-    int wordlen = 1;
-    int wordpos = 0;
-    int start = 0;
+    int wordLen = 0;
+    int wordEnd = 0;
+    int wordStart = 0;
     int i = 0;
     while (i < strsize)
     {
         // skip space
         while (i < strsize && isspace(string[i]))
         {
-            start++; 
+	    wordStart++; 
+	    wordEnd++;
             i++;
         }
-        if (start >= strsize) break;
+        if (wordStart >= strsize) break;
 
         // get word len
-        while (i < strsize && !isspace(string[i]) )
-        {
-            wordpos = i;
-            i++;
+        while (i < strsize && !isspace(string[i]) \
+		&& !((string[i] == '<') || (string[i] == '>') || (string[i] == '|')))
+	{
+	    wordEnd = i;
+	    i++;
         }
-        wordlen = wordpos - start + 1;
-        word = malloc(wordlen + 1);
-        // printf("start: %d, wordpos: %d len: %d\n", start, wordpos, wordlen);
-        word = memcpy(word, string + start, wordlen);
+	if ((string[wordEnd] == '<') || (string[wordEnd] == '>') || (string[wordEnd] == '|')) i++;
+        wordLen = wordEnd - wordStart + 1;
+        word = malloc(wordLen + 1);
+        word = memcpy(word, string + wordStart, wordLen);
         if (word) {
-            word[wordlen] = '\0';
-            commands[commands_count++] = word;
+            word[wordLen] = '\0';
+	    commands[commands_count++] = word;
         }
-        // if (DEBUG) printf("word: %s\n", word);
-        start = i;
+
+        if (DEBUG) printf("word:\"%s\"\tword-start: %d\tword-end: %d\tword-len: %d\n", word, wordStart, wordEnd, wordLen);
+
+	wordStart = i;
+	wordEnd++;
     }
     return commands_count;
 }
