@@ -45,7 +45,8 @@ int *tokenize(char*** commands, char* string, int strsize, int *len){
         word = memcpy(word, string + wordStart, wordLen);
         if (word) {
             word[wordLen] = '\0';
-	    int isPipeOrRedirect = (strcmp(word, "<")==0) || (strcmp(word, ">")==0) || (strcmp(word, "|")==0);
+	    int isPipeOrRedirect = (strcmp(word, "<")==0) ||\
+				   (strcmp(word, ">")==0) || (strcmp(word, "|")==0);
 	    if (isPipeOrRedirect) {
 		commands[j][inner_count] = NULL;
 		commands[++j] = malloc(sizeof(char*));
