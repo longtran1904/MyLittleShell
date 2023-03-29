@@ -65,8 +65,8 @@ void execProgram(char** prog_args){
                 printf(YELLOW "stat() found file %s at dir: %s" RESET "\n", prog_args[0], filePath);
                 int i = 0;
                 printf(YELLOW "args:");
-                while (*(prog_args + i) != NULL){
-                    printf("[%s]   ", *(prog_args + i));
+                while (prog_args[i] != NULL){
+                    printf("[%s]   ", prog_args[i]);
                     i++;
                 }
                 printf(RESET "\n");
@@ -105,14 +105,17 @@ void execProgram(char** prog_args){
 }
 
 // given a program path, execute it
-void execProgGivenPath(char *prog_path, char **prog_args){
+void execProgGivenPath(char **prog_args){
+
+    if (DEBUG) printf(YELLOW "PATH given is %s" RESET "\n", prog_args[0]);
+
     int pid = fork();
     if (pid == -1) { 
 	perror("fork failed");
     }
     if (pid == 0) {
 	// we are in the child process
-	execv(prog_path, prog_args);
+	execv(prog_args[0], prog_args);
 	exit(EXIT_FAILURE);
     }
     int wstatus;
@@ -134,8 +137,8 @@ void execute(char ***commands, int len, int *sizes) {
     // Implemented for single command so far
     // TODO: split arguments corresponding each command and execute
     if (**commands[0] == '/'){
-	// run program in path given
-	execProgGivenPath(**commands, *commands+1);
+        // run program in path given
+        execProgGivenPath(*commands);
     }
     else {
 	if (strcmp(**commands, "pwd") == 0){
@@ -153,7 +156,6 @@ void execute(char ***commands, int len, int *sizes) {
 	    changeDir(*(*commands+1));
 	    return;
 	}
-
         execProgram(commands[0]);
     }
 }
