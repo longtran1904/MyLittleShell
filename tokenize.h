@@ -1,1 +1,1 @@
-int *tokenize(char***, char*, int, int*);
+int tokenize(char***, int, char*, int);

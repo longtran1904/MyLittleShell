@@ -131,7 +131,7 @@ void execProgram(char** prog_args){
     if (!isPathGiven) free(filePath);
 }
 
-void execute(char ***commands, int len, int *sizes) {
+void execute(char ***commands, int len) {
     if (commands == NULL) return;
 
     // Implemented for single command so far

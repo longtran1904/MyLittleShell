@@ -6,13 +6,10 @@
 #ifndef DEBUG
 #define DEBUG 0
 #endif
-#define BUFSIZE 512
+#define INNER_SIZE 80
 
 // write array of words to commands, return size of commands
-int *tokenize(char*** commands, char* string, int strsize, int *len){
-    int* sizes = malloc(sizeof(int)*100);
-    sizes[0] = 0;
-    int sizes_len = 100;
+int tokenize(char*** commands, int commCapacity, char* string, int strsize){
     char* word = NULL;
     int wordLen = 0;
     int wordEnd = 0;
@@ -20,7 +17,8 @@ int *tokenize(char*** commands, char* string, int strsize, int *len){
     int inner_count = 0;
     int i = 0;
     int j = 0;
-    commands[j] = malloc(BUFSIZE);
+    commands[j] = malloc(INNER_SIZE);
+    int commjCapacity = (int) (INNER_SIZE / sizeof(char**));
     while (i < strsize)
     {
         // skip space
@@ -49,34 +47,33 @@ int *tokenize(char*** commands, char* string, int strsize, int *len){
 				   (strcmp(word, ">")==0) || (strcmp(word, "|")==0);
 	    if (isPipeOrRedirect) {
 		commands[j][inner_count] = NULL;
-		commands[++j] = malloc(sizeof(char*));
-		commands[j][0] = word;
-		sizes[j] = 1;
 
-		commands[++j] = malloc(BUFSIZE);
-		sizes[j] = 0;
+		if (j+2 >= commCapacity){
+		    if (DEBUG) printf("commands not large enough\n");
+		    return -1;
+		}
+
+		commands[++j] = malloc(2*sizeof(char**));
+		commands[j][0] = word;
+		commands[j][1] = NULL; 
+
+		commands[++j] = malloc(INNER_SIZE);
+		commjCapacity = (int) (INNER_SIZE / sizeof(char**));
 		inner_count=0;
 	    }
-	    if (inner_count+1 > sizeof(commands[j])){
-		char **res = realloc(commands[j], 2*sizeof(commands[j]));
+	    if (inner_count+1 > commjCapacity) { 
+		commjCapacity *= 2;
+		char **res = realloc(commands[j], commjCapacity*sizeof(char**)); 
 		if ( res != NULL ){
 		    commands[j] = res;
+		    if (DEBUG) printf("resized commands[j] to %d\n", commjCapacity);
 		} else {
-		    printf("failed to resize commands[j]\n");
+		    if (DEBUG) printf("failed to resize commands[j]\n");
 		}
 	    }
-	    if (!isPipeOrRedirect) {
+	    if (!isPipeOrRedirect){
 		commands[j][inner_count++] = word;
-		if ( j >= sizes_len ) {
-		    int *res = realloc(sizes, 2*sizes_len);
-		    if ( res != NULL ){
-			sizes = res;
-			sizes_len *= 2;
-		    } else {
-			printf("failed to resize sizes\n");
-		    }
-		}
-		sizes[j]++;
+		if (i >= strsize-1) commands[j][inner_count] = NULL; 
 	    }
 	}
 
@@ -85,6 +82,5 @@ int *tokenize(char*** commands, char* string, int strsize, int *len){
 	wordStart = i;
 	wordEnd++;
     }
-    *len = j+1;
-    return sizes;
+    return j+1;
 }
