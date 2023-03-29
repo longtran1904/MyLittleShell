@@ -3,6 +3,7 @@
 #include<stdio.h>
 #include<string.h>
 #include<sys/stat.h>
+#include<stdbool.h>
 
 #define RESET   "\033[0m"
 #define RED     "\033[31m"      /* Red */
@@ -36,99 +37,98 @@ void execProgram(char** prog_args){
     // Search through all directories for prog_name:
     // PATH evironments
 
-    char *PATH[6] = {
-        "/usr/local/sbin/", 
-        "/usr/local/bin/",
-        "/usr/sbin/",
-        "/usr/bin/",
-        "/sbin/",
-        "/bin/"
-    };
-    int path_count = 6;
+    bool isPathGiven = false;
+    if (*prog_args[0] == '/') isPathGiven = true;
 
+    // Infos about the filePath, and stat_buf (using stat())
     struct stat stat_buf;
-    char* filePath;
-    int pathSize;
-    for (int i = 0; i < path_count; i++)
-    {   
-        // concatenate PATH[i] and prog_name
-        pathSize = strlen(PATH[i]) + strlen(prog_args[0]) + 1;
-        pathSize = ((pathSize + 7)/8)  * 8;
-        filePath = malloc(pathSize * sizeof(char)); 
-        strcpy(filePath, PATH[i]);
-        strcat(filePath, prog_args[0]);
+    char* filePath = NULL;
 
-        if (stat(filePath, &stat_buf) == 0) // success
-        {
-            if (DEBUG) 
+    if (isPathGiven)
+        filePath = prog_args[0]; // take program path from command
+    else
+    {
+        // look for program based on bare names from command
+        char *PATH[6] = {
+            "/usr/local/sbin/", 
+            "/usr/local/bin/",
+            "/usr/sbin/",
+            "/usr/bin/",
+            "/sbin/",
+            "/bin/"
+        };
+        int path_count = 6;
+        char* tryPath;
+        int pathSize;
+
+        for (int i = 0; i < path_count; i++)
+        {   
+            // concatenate PATH[i] and prog_name
+            pathSize = strlen(PATH[i]) + strlen(prog_args[0]) + 1;
+            pathSize = ((pathSize + 7)/8)  * 8;
+
+            //assign and try paths
+            
+            tryPath = (char*) malloc(pathSize * sizeof(char));
+            strcpy(tryPath, PATH[i]);
+            strcat(tryPath, prog_args[0]); 
+
+            if (stat(tryPath, &stat_buf) == 0) // found program
             {
-                printf(YELLOW "stat() found file %s at dir: %s" RESET "\n", prog_args[0], filePath);
-                int i = 0;
-                printf(YELLOW "args:");
-                while (prog_args[i] != NULL){
-                    printf("[%s]   ", prog_args[i]);
-                    i++;
+                if (DEBUG) {
+                    printf(YELLOW "stat() found file %s at dir: %s" RESET "\n", prog_args[0], tryPath);
+                    int i = 0;
+                    printf(YELLOW "args:");
+                    while (prog_args[i] != NULL){
+                        printf("[%s]   ", prog_args[i]);
+                        i++;
+                    }
+                    printf(RESET "\n");
                 }
-                printf(RESET "\n");
+                filePath = (char*) malloc(pathSize);
+                memcpy(filePath, tryPath, pathSize);
+                break; // stop searching
             }
-
-            int pid = fork();
-            if (pid == -1) { 
-                perror("fork failed");
-            }
-            if (pid == 0) {
-                // we are in the child process
-                if (execv(filePath, prog_args) < 0){
-                    perror("execv failed");
-                    exit(0);
-                }
-
-                // if we reach here, something went wrong
-                exit(EXIT_FAILURE);
-            }
-            else {
-                int wstatus;
-                int tpid = wait(&wstatus); // wait for child to finish
-                if (tpid == -1) // wait failed
-                {
-                    perror("wait failed");
-                }    
-
-                if (WIFEXITED(wstatus) && DEBUG){
-                    // child exited normally
-                    printf("child exited with %d\n", WEXITSTATUS(wstatus));
-                }
-            }
-            free(filePath);
+            free(tryPath);
         }
     }
-}
 
-// given a program path, execute it
-void execProgGivenPath(char **prog_args){
-
-    if (DEBUG) printf(YELLOW "PATH given is %s" RESET "\n", prog_args[0]);
-
-    int pid = fork();
-    if (pid == -1) { 
-	perror("fork failed");
+    if (filePath == NULL) {
+        // program not found
+        printf("Program %s not found!\n", prog_args[0]);
     }
-    if (pid == 0) {
-	// we are in the child process
-	execv(prog_args[0], prog_args);
-	exit(EXIT_FAILURE);
-    }
-    int wstatus;
-    int tpid = wait(&wstatus); // wait for child to finish
-    if (tpid == -1) // wait failed
+    else
     {
-	perror("wait failed");
-    }    
+        // Run program in filePath
+        int pid = fork();
+        if (pid == -1) { 
+            perror("fork failed");
+        }
+        if (pid == 0) {
+            // we are in the child process
+            if (execv(filePath, prog_args) < 0){
+                perror("execv failed");
+                exit(0);
+            }
 
-    if (WIFEXITED(wstatus)){
-	// child exited normally
-	printf("child exited with %d\n", WEXITSTATUS(wstatus));
+            // if we reach here, something went wrong
+            exit(EXIT_FAILURE);
+        }
+        else {
+            int wstatus;
+            int tpid = wait(&wstatus); // wait for child to finish
+            if (tpid == -1) // wait failed
+            {
+                perror("wait failed");
+            }    
+
+            if (WIFEXITED(wstatus) && DEBUG){
+                // child exited normally
+                printf("child exited with %d\n", WEXITSTATUS(wstatus));
+            }
+        }
     }
+    if (!isPathGiven) free(filePath);
 }
 
 void execute(char ***commands, int len, int *sizes) {
@@ -136,11 +136,6 @@ void execute(char ***commands, int len, int *sizes) {
 
     // Implemented for single command so far
     // TODO: split arguments corresponding each command and execute
-    if (**commands[0] == '/'){
-        // run program in path given
-        execProgGivenPath(*commands);
-    }
-    else {
 	if (strcmp(**commands, "pwd") == 0){
 	    char buffer[BUFSIZE];
 	    int res = getCurDir(buffer);
@@ -156,6 +151,5 @@ void execute(char ***commands, int len, int *sizes) {
 	    changeDir(*(*commands+1));
 	    return;
 	}
-        execProgram(commands[0]);
-    }
+    execProgram(commands[0]);
 }
