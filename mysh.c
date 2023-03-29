@@ -51,7 +51,7 @@ void ReadThenWrite(){
 
 		if (DEBUG) printCommands(commands, count); // write words in commands
 
-		//execute(commands);
+		execute(commands);
 		//TODO: set lastCommandFailed if any command has non-zero exit status
 
 		// reset line buffer
