@@ -50,5 +50,7 @@ int tokenize(char** commands, char* string, int strsize){
 	wordStart = i;
 	wordEnd++;
     }
+
+    commands[commands_count++] = NULL;
     return commands_count;
 }
