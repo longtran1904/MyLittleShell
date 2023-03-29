@@ -16,7 +16,7 @@
 
 void changeDir(char *path){
     int res = chdir(path);
-    if (res==-1) perror("cd failed!");
+    if (res==-1) perror("cd failed");
     return;
 }
 
@@ -128,19 +128,17 @@ void execProgGivenPath(char *prog_path, char **prog_args){
     }
 }
 
-void execute(char **commands, int len) {
+void execute(char ***commands, int len, int *sizes) {
     if (commands == NULL) return;
 
     // Implemented for single command so far
     // TODO: split arguments corresponding each command and execute
-    if (commands[0] != NULL && *commands[0] == '/'){
+    if (**commands[0] == '/'){
 	// run program in path given
-	char** args = malloc(strlen(commands[1]));
-	args[0] = commands[1];
-	execProgGivenPath(commands[0], &commands[1]);
+	execProgGivenPath(**commands, *commands+1);
     }
     else {
-	if (strcmp(commands[0], "pwd") == 0){
+	if (strcmp(**commands, "pwd") == 0){
 	    char buffer[BUFSIZE];
 	    int res = getCurDir(buffer);
 	    if (res == 0){  
@@ -151,13 +149,11 @@ void execute(char **commands, int len) {
 	    }
 	    return;
 	}
-	if (strcmp(commands[0],"cd") == 0){
-	    changeDir(commands[1]);
+	if (strcmp(**commands, "cd") == 0){
+	    changeDir(*(*commands+1));
 	    return;
 	}
 
-        execProgram(commands);
+        execProgram(commands[0]);
     }
-
-
 }

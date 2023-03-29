@@ -4,7 +4,7 @@
 #include <string.h>
 
 #ifndef DEBUG
-    #define DEBUG 0
+#define DEBUG 0
 #endif
 #define BUFSIZE 512
 

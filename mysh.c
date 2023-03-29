@@ -41,6 +41,7 @@ void ReadThenWrite(){
 	lstart = 0;
 	for (pos = 0; pos < readBytes; pos++){
 	    if (buffer[pos] == '\n'){
+		if (pos == 0) break;
 		int thislen = pos - lstart + 1;
 		if (DEBUG) fprintf(stderr,GREEN "stream pos: %d | lstart: %d | finished line %d+%d bytes\n" RESET, pos, lstart, linePos, thislen);
 		append(buffer + lstart, thislen);
@@ -52,7 +53,7 @@ void ReadThenWrite(){
 
 		if (DEBUG) printCommands(commands, sizes, len); // write words in commands
 
-		//execute(commands, count);
+		execute(commands, len, sizes);
 		//TODO: set lastCommandFailed to 1 if any command has non-zero exit status
 
 		// reset line buffer
