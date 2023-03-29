@@ -47,13 +47,24 @@ void ReadThenWrite(){
 		append(buffer + lstart, thislen);
 
 		/* Tokenize each line */
-		char*** commands = malloc(BUFSIZE);
+		int scale = 1;
+		char ***commands = malloc(BUFSIZE);
 		int len = 0;
-		int *sizes = tokenize(commands, lineBuffer, linePos, &len);
+		int initCommCapacity = (int) (BUFSIZE/sizeof(char***));
+		while (1) { // need loop to make sure commands is large enough
+		    len = tokenize(commands, scale*initCommCapacity, lineBuffer, linePos);
+		    if (len == -1) { // need to resize commands
+			free(commands);
+			scale *= 2;
+			commands = malloc(scale*BUFSIZE);
+			if (DEBUG) printf("resizing->commCapacity = %d\n", scale*initCommCapacity);
+		    }
+		    break;
+		}
 
-		if (DEBUG) printCommands(commands, sizes, len); // write words in commands
+		if (DEBUG) printCommands(commands, len); // write words in commands
 
-		execute(commands, len, sizes);
+		execute(commands, len);
 		//TODO: set lastCommandFailed to 1 if any command has non-zero exit status
 
 		// reset line buffer
@@ -118,23 +129,22 @@ void print() {
 }
 
 // Print each command from buffer to file fd
-void printCommands(char*** commands, int *sizes, int len) {
+void printCommands(char*** commands, int len) {
     int i = 0;
     int j = 0;
     printf("Commands: ");
     printf("[");
     while (i < len){
 	printf("["); 
-	while ( j < sizes[i]){
+	while ( commands[i][j] != NULL ){
 	    printf("%s", commands[i][j]);
 	    j++;
-	    if (j != sizes[i]) printf(", ");
+	    printf(", ");
 	}
-	printf("]");
+	printf("NULL]");
 	i++;
 	j = 0;
-	if (i != len) printf(", ");
-    }
+	if (i != len) printf(", "); }
     printf("]\n");
 }
 
