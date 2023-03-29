@@ -19,7 +19,6 @@
 
 char *lineBuffer;
 int linePos = 0, lineSize = 1;
-int input_fd, output_fd;
 
 void append(char *, int);
 void print();
@@ -31,11 +30,11 @@ void ReadThenWrite(){
     char buffer[BUFSIZE];
 
     int readBytes, lstart = 0; // lstart to calculate len of each line
-    if (input_fd == 0){
+    if (STDIN_FILENO == 0){
 	printf(GREEN "THeshell> " RESET);
 	fflush(stdout);
     }
-    while ((readBytes = read(input_fd, buffer, BUFSIZE)) > 0){
+    while ((readBytes = read(STDIN_FILENO, buffer, BUFSIZE)) > 0){
 	if (DEBUG) printf(YELLOW "Read %d bytes!!" RESET "\n", readBytes);
 	// If a new line, process the line buffer
 	lstart = 0;
@@ -78,7 +77,7 @@ void ReadThenWrite(){
 		}
 	    }
 	}
-	if (input_fd == 0){
+	if (STDIN_FILENO == 0){
 	    if (lastCommandFailed) printf(RED "!" RESET);
 	    printf(GREEN "THeshell> " RESET);
 	    fflush(stdout);
@@ -123,7 +122,7 @@ void append(char *buf, int len){
 
 // Print each command from buffer to file fd
 void print() {
-    int writeBytes = write(output_fd, lineBuffer, linePos);
+    int writeBytes = write(STDOUT_FILENO, lineBuffer, linePos);
     if (writeBytes == -1) printf(RED "Didn't write any byte!!!" RESET "\n");
     else if (DEBUG) printf(YELLOW "Wrote %d bytes!!" RESET "\n", writeBytes);
 }
@@ -151,10 +150,8 @@ void printCommands(char*** commands, int len) {
 void setupInputOutput(int argc, char** argv){
     if (argc <= 1)
     {
-	//set stdin stdout to terminal
-	input_fd = 0;
-	output_fd = 1;
-	if (isatty(input_fd)) // if input_fd is pointing to terminal
+	//stdin stdout to terminal - using STDIN_FILENO and STDOUT_FILENO
+	if (isatty(STDIN_FILENO)) // if input_fd is pointing to terminal
 	    printf(RED "Welcome to THeShell! (a Tran / Herman collab)" RESET "\n"); 
     }
     else
@@ -162,24 +159,28 @@ void setupInputOutput(int argc, char** argv){
 	//set stdin stdout to argv[1] and "output.txt"
 	char* dname = argv[1];
 	// open dir
-	int fd;
+	int fd, nfd;
 	fd = open(dname, O_RDONLY);
 	if (fd == -1){
 	    perror(dname);
 	    exit(EXIT_FAILURE);
 	} else {
-	    input_fd = fd;
+        nfd = dup2(fd, STDOUT_FILENO);
+        if (nfd == -1) printf(RED "ERROR: assigning STDOUT_FILENO failed" RESET "\n");
 	    if (DEBUG) printf(YELLOW "Successfully opened %s" RESET "\n", dname); 
 	}
+    close(fd);
 	// open output
 	fd = open("output.txt", O_RDWR | O_CREAT | O_TRUNC, S_IRWXU);
 	if (fd == -1){
 	    perror("output.txt");
 	    exit(EXIT_FAILURE);
 	} else {
-	    output_fd = fd;
+	    nfd = dup2(fd, STDOUT_FILENO);
+        if (nfd == -1) printf(RED "ERROR: assigning STDOUT_FILENO failed" RESET "\n");
 	    if (DEBUG) printf(YELLOW "Successfully opened output.txt" RESET "\n");
 	}
+    close(fd);
     }
 }
 
@@ -187,7 +188,7 @@ int main(int argc, char** argv){
 
     setupInputOutput(argc, argv);
     ReadThenWrite();
-    close(input_fd);
-    close(output_fd);   
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);   
     return EXIT_SUCCESS;
 }

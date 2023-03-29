@@ -4,6 +4,7 @@
 #include<string.h>
 #include<sys/stat.h>
 #include<stdbool.h>
+#include <fcntl.h>
 
 #define RESET   "\033[0m"
 #define RED     "\033[31m"      /* Red */
@@ -32,11 +33,12 @@ int getCurDir(char* buf){
     return EXIT_SUCCESS;
 };
 
-void execProgram(char** prog_args){
+void execProgram(char*** commands, int len){
     // Create a child process
     // Search through all directories for prog_name:
     // PATH evironments
 
+    char** prog_args = commands[0];
     bool isPathGiven = false;
     if (*prog_args[0] == '/') isPathGiven = true;
 
@@ -106,6 +108,33 @@ void execProgram(char** prog_args){
         }
         if (pid == 0) {
             // we are in the child process
+            // Check for redirections:
+            // TODO: Checking valid command for more than 3 commands.
+            if (len > 1) {
+                if (len != 3) printf(RED "ERROR: Invalid command" RESET "\n");
+                
+                else{
+                    if (commands[1][0][0] == '<')
+                    {
+                        // Redirect input from a file
+                        int fd = open(commands[2][0], O_RDONLY);
+                        int nfd = dup2(fd, STDIN_FILENO);
+                        if (nfd == -1) printf( RED "ERROR: Redirect input failed" RESET "\n");
+                        close(fd);    
+                    }
+
+
+                    if (commands[1][0][0] == '>')
+                    {
+                        // Redirect output to a file
+                        int fd = open(commands[2][0], O_WRONLY|O_CREAT|O_TRUNC, 0640);
+                        int nfd = dup2(fd, STDOUT_FILENO);
+                        if (nfd == -1) printf( RED "ERROR: Redirect output failed" RESET "\n");
+                        close(fd);
+                    }   
+                }
+            }
+            // Execute program
             if (execv(filePath, prog_args) < 0){
                 perror("execv failed");
                 exit(0);
@@ -151,5 +180,5 @@ void execute(char ***commands, int len) {
 	    changeDir(*(*commands+1));
 	    return;
 	}
-    execProgram(commands[0]);
+    execProgram(commands, len);
 }
