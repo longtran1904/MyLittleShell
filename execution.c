@@ -16,17 +16,13 @@
 
 void changeDir(char *path){
     int res = chdir(path);
-    if (res == 0) printf("Directory changed to %s\n", path);
-    else {
-        perror("Change Dir Failed");
-    }
+    if (res==-1) perror("cd failed");
     return;
 }
 
 // sucess: return 0 and info to buf
 // failed: return -1
 int getCurDir(char* buf){
-
     if (getcwd(buf, BUFSIZE) == NULL) {
         // if getcwd gets error
         perror("getcwd() error");
@@ -108,33 +104,56 @@ void execProgram(char** prog_args){
     }
 }
 
-void execute(char **commands) {
+// given a program path, execute it
+void execProgGivenPath(char *prog_path, char **prog_args){
+    int pid = fork();
+    if (pid == -1) { 
+	perror("fork failed");
+    }
+    if (pid == 0) {
+	// we are in the child process
+	execv(prog_path, prog_args);
+	exit(EXIT_FAILURE);
+    }
+    int wstatus;
+    int tpid = wait(&wstatus); // wait for child to finish
+    if (tpid == -1) // wait failed
+    {
+	perror("wait failed");
+    }    
+
+    if (WIFEXITED(wstatus)){
+	// child exited normally
+	printf("child exited with %d\n", WEXITSTATUS(wstatus));
+    }
+}
+
+void execute(char ***commands, int len, int *sizes) {
     if (commands == NULL) return;
 
     // Implemented for single command so far
     // TODO: split arguments corresponding each command and execute
-    if (commands[0] != NULL && *commands[0] == '/'){
-        // run program in path given
+    if (**commands[0] == '/'){
+	// run program in path given
+	execProgGivenPath(**commands, *commands+1);
     }
     else {
-        if (strcmp(commands[0], "pwd") == 0){
-            char buffer[BUFSIZE];
-            int res = getCurDir(buffer);
-            if (res == 0){  
-                printf("Current directory is\n%s\n", buffer);
-            }
-            else {
-                printf("pwd failed\n");
-            }
-            return;
-        }
-        if (strcmp(commands[0],"cd") == 0){
-            changeDir(commands[1]);
-            return;
-        }
+	if (strcmp(**commands, "pwd") == 0){
+	    char buffer[BUFSIZE];
+	    int res = getCurDir(buffer);
+	    if (res == 0){  
+		printf("%s\n", buffer);
+	    }
+	    else {
+		printf("pwd failed\n");
+	    }
+	    return;
+	}
+	if (strcmp(**commands, "cd") == 0){
+	    changeDir(*(*commands+1));
+	    return;
+	}
 
-        execProgram(commands);
+        execProgram(commands[0]);
     }
-
-
 }
