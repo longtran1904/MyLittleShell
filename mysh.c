@@ -46,19 +46,20 @@ void ReadThenWrite(){
 		append(buffer + lstart, thislen);
 
 		/* Tokenize each line */
-		char** commands = malloc(BUFSIZE);
-		int count = tokenize(commands, lineBuffer, linePos);
+		char*** commands = malloc(BUFSIZE);
+		int len = 0;
+		int *sizes = tokenize(commands, lineBuffer, linePos, &len);
 
-		if (DEBUG) printCommands(commands, count); // write words in commands
+		if (DEBUG) printCommands(commands, sizes, len); // write words in commands
 
-		//execute(commands);
-		//TODO: set lastCommandFailed if any command has non-zero exit status
+		//execute(commands, count);
+		//TODO: set lastCommandFailed to 1 if any command has non-zero exit status
 
 		// reset line buffer
 		lstart = pos + 1;
 		linePos = 0;
 
-		if (strcmp(*commands, "exit") == 0){
+		if (strcmp(**commands, "exit") == 0){
 		    printf(RED "Terminating THeShell!" RESET "\n");
 		    fflush(stdout);
 		    return;
@@ -114,16 +115,26 @@ void print() {
     if (writeBytes == -1) printf(RED "Didn't write any byte!!!" RESET "\n");
     else if (DEBUG) printf(YELLOW "Wrote %d bytes!!" RESET "\n", writeBytes);
 }
+
 // Print each command from buffer to file fd
-void printCommands(char** commands, int count) {
+void printCommands(char*** commands, int *sizes, int len) {
     int i = 0;
-    printf("List of tokens: \n");
-    while (i < count){
-	printf("[%s]\n", commands[i]);
+    int j = 0;
+    printf("Commands: ");
+    printf("[");
+    while (i < len){
+	printf("["); 
+	while ( j < sizes[i]){
+	    printf("%s", commands[i][j]);
+	    j++;
+	    if (j != sizes[i]) printf(", ");
+	}
+	printf("]");
 	i++;
-	// if (writeBytes == -1) printf(RED "Didn't write any byte!!!" RESET "\n");
-	// else if (DEBUG) printf(YELLOW "Wrote %d bytes!!" RESET "\n", writeBytes);
+	j = 0;
+	if (i != len) printf(", ");
     }
+    printf("]\n");
 }
 
 void setupInputOutput(int argc, char** argv){
