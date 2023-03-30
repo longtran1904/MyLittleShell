@@ -208,8 +208,8 @@ pid_t execProgram(char*** commands, int* idx, int len, int* pd, int lastPipe){
     return pid;
 }
 
-void execute(char ***commands, int len) {
-    if (commands == NULL) return;
+int execute(char ***commands, int len) {
+    if (commands == NULL) return EXIT_SUCCESS;
 
     int* pids = malloc(sizeof(int) * 4);
     int pids_count = 0, pids_size = 4;
@@ -218,7 +218,7 @@ void execute(char ***commands, int len) {
     for (int i = 0; i < len;i++){ 
         if (pipe(pd + i*2) == -1){
             perror("pipe");
-            exit(EXIT_FAILURE);
+            return -1;
         }
     }
 
@@ -238,7 +238,7 @@ void execute(char ***commands, int len) {
                 lastWritePipe = command_iterator * 2;
                 printf("lastWritePipe value %d\n", lastWritePipe);
                 pids[pids_count++] = pid;
-            } 
+            }
         }  
         command_iterator++;
     }
@@ -263,6 +263,8 @@ void execute(char ***commands, int len) {
             printf("\nchild exited with status %d\n", WEXITSTATUS(wstatus));
         }else{
             printf("\nexited abnormally\n");
+            return -1;
         }
     }
+    return EXIT_SUCCESS;
 }
