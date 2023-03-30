@@ -3,20 +3,75 @@
 #include <stdio.h>	
 #include <string.h>
 #include <stdbool.h>
+#include <dirent.h> 
+#include <limits.h>
+#include <unistd.h>
+#include "execution.h"
 
 #ifndef DEBUG
 #define DEBUG 0
 #endif
-#define INNER_SIZE 80
+#define MAX_ARG_LEN 10
+#define MAX_NUM_FILES 100
 
-/*
+char **getAllFileNames(int *count){
+    *count = 0;
+    DIR *d;
+    struct dirent *dir;
+    d = opendir(".");
+    char **allFiles = malloc(MAX_NUM_FILES*sizeof(char**));
+    int allFilesCapacity = MAX_NUM_FILES;
+    if (d) {
+	while ((dir = readdir(d)) != NULL) {
+	    // resize allFiles if needed
+	    if (*count >= allFilesCapacity){
+		allFilesCapacity *= 2;
+		char **res = realloc(allFiles, allFilesCapacity*sizeof(char**)); 
+		if ( res != NULL ){
+		    allFiles = res;
+		    if (DEBUG) printf("resized allFiles to have capacity: %d\n", allFilesCapacity);
+		} else {
+		    if (DEBUG) printf("failed to resize allFiles!\n");
+		}
+	    }
+
+	    char *file = malloc(FILENAME_MAX);
+	    if (DEBUG) printf("file: %s\n", dir->d_name);
+	    file = dir->d_name;
+	    allFiles[(*count)++] = file;
+	}
+	allFiles[*count] = NULL;
+	closedir(d);
+    }
+    return allFiles;
+}
+
 // returns a list of strings of all wildcard matches
 char **findWildCardMatches(char *dir, char *lft, char *rht, int *count){
-    // TODO: make sure patterns beginning with * (ex. *.txt) don't match with names beginning with .
-    if (dir != NULL) chdir(path);
+    *count = 0;
+    char **files;
+    int num_files = 0;
+    char **matches;
+    char buffer[PATH_MAX];
+    if (dir != NULL) {
+	// store pwd
+	if (getcwd(buffer, PATH_MAX) == NULL) {
+	    if (DEBUG) printf("couldn't get pwd!\n");
+	    return NULL;
+	}
+	changeDir(dir);
+    }
+    files = getAllFileNames(&num_files);
+    printf("numFiles: %d\n", num_files);
 
+
+    // TODO: make sure patterns beginning with * (ex. *.txt) don't match with names beginning with .
+
+    // cd back to what it was
+    if (dir != NULL) changeDir(buffer);
+    // TODO: change to return matches
+    return files;
 }
-*/
 
 // write array of words to commands, return size of commands
 int tokenize(char*** commands, int commCapacity, char* string, int strsize){
@@ -27,8 +82,8 @@ int tokenize(char*** commands, int commCapacity, char* string, int strsize){
     int inner_count = 0;
     int i = 0;
     int j = 0;
-    commands[j] = malloc(INNER_SIZE);
-    int commjCapacity = (int) (INNER_SIZE / sizeof(char**));
+    int commjCapacity = MAX_ARG_LEN;
+    commands[j] = malloc(commjCapacity*sizeof(char**));
     bool isRedirect = false;
     bool wasRedirect = false;
     bool isPipe = false;
@@ -92,24 +147,47 @@ int tokenize(char*** commands, int commCapacity, char* string, int strsize){
 
 	char **matches = NULL;
 	int num_matches = 0;
-	/*
 	if (containsWildcard){
 	    char *dir = NULL;
 	    char *wildcard_lft = NULL;
 	    char *wildcard_rht = NULL;
+	    int wild_lft_len = wildcard_pos - wordStart;
+	    int wild_rht_len = wordEnd - wildcard_pos;
 	    if (isDir) {
 		int dir_len = last_slash - wordStart + 1;
 		dir = malloc(dir_len + 1);
 		memcpy(dir, word, dir_len);
 		dir[dir_len] = '\0';
-		wildcard_lft = ;
-		wildcard_rht = ;
+
+		wild_lft_len -= dir_len;
+		wildcard_lft = malloc(wild_lft_len + 1);
+		memcpy(wildcard_lft, word+dir_len, wild_lft_len);
+		wildcard_lft[wild_lft_len] = '\0';
+
+		wildcard_rht= malloc(wild_rht_len + 1);
+		memcpy(wildcard_rht, word+dir_len+wild_lft_len+1, wild_rht_len);
+		wildcard_rht[wild_rht_len] = '\0';
+
+		if (DEBUG) {
+		    printf("directory containing wildcard filename: %s\n", dir);
+		}
+	    } else {
+		wildcard_lft = malloc(wild_lft_len + 1);
+		memcpy(wildcard_lft, word, wild_lft_len);
+		wildcard_lft[wild_lft_len] = '\0';
+
+		wildcard_rht= malloc(wild_rht_len + 1);
+		memcpy(wildcard_rht, word+wild_lft_len+1, wild_rht_len);
+		wildcard_rht[wild_rht_len] = '\0';
 	    }
-	    wildcard_lft = ;
-	    wildcard_rht = ;
+
+	    if (DEBUG) {
+		printf("wildcard left (of *): %s\n", wildcard_lft);
+		printf("wildcard right (of *): %s\n", wildcard_rht);
+	    }
+
 	    matches = findWildCardMatches(dir, wildcard_lft, wildcard_rht, &num_matches);
 	}
-	*/
 
 	if (DEBUG) printf("word:\"%s\"\tword-start: %d\tword-end: %d\tword-len: %d\n",\
 		word, wordStart, wordEnd, wordLen);
@@ -117,6 +195,10 @@ int tokenize(char*** commands, int commCapacity, char* string, int strsize){
 	isRedirect = (strcmp(word, "<")==0) || (strcmp(word, ">")==0); 
 	if (isPipe) {
 	    // error catching
+	    if (j==0 && inner_count==0) {
+		if (DEBUG) printf("tokenize error: commands starts with pipe!\n");
+		return -1;
+	    }
 	    if (numRedirectsToSkip > 2) {
 		if (DEBUG) printf("tokenize error: too many redirects!\n");
 		return -1;
@@ -130,6 +212,8 @@ int tokenize(char*** commands, int commCapacity, char* string, int strsize){
 		return -1;
 	    }
 
+	    //jprintf("commjCapacity: %d\n", commjCapacity);
+	    //printf("inner_count: %d\n", inner_count);
 	    commands[j][inner_count] = NULL;
 	    j += 1 + numRedirectsToSkip;
 	    //printf("j reset isPipe: %d\n", j);
@@ -148,9 +232,10 @@ int tokenize(char*** commands, int commCapacity, char* string, int strsize){
 	    commands[j][1] = NULL; 
 
 	    // start new inner list
-	    commands[++j] = malloc(INNER_SIZE);
+	    commjCapacity = MAX_ARG_LEN;
+	    commands[++j] = malloc(commjCapacity*sizeof(char**));
+		    
 	    //printf("j reset isPipe: %d\n", j);
-	    commjCapacity = (int) (INNER_SIZE / sizeof(char**));
 	    inner_count=0;
 	    numRedirectsToSkip = 0;
 	    wasPipe = true;
@@ -170,6 +255,10 @@ int tokenize(char*** commands, int commCapacity, char* string, int strsize){
 	    //printf("j reset wasRedirect: %d\n", j);
 	} else if (isRedirect) { // adds redirect token
 	    // error catching
+	    if (j==0 && inner_count==0) {
+		if (DEBUG) printf("tokenize error: command starts with redirect!\n");
+		return -1;
+	    }
 	    if (wasPipe) {
 		if (DEBUG) printf("tokenize error: redirect immediately after pipe!\n");
 		return -1;
@@ -194,7 +283,7 @@ int tokenize(char*** commands, int commCapacity, char* string, int strsize){
 	    numRedirectsToSkip++;
 	} else {
 	    // resizing
-	    if (inner_count+1+num_matches > commjCapacity) { 
+	    if (inner_count+1+num_matches >= commjCapacity) { 
 		commjCapacity *= 2;
 		char **res = realloc(commands[j], commjCapacity*sizeof(char**)); 
 		if ( res != NULL ){
