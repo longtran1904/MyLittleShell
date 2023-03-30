@@ -11,27 +11,17 @@
 #define GREEN   "\033[32m"      /* Green */
 #define YELLOW  "\033[33m"      /* Yellow */
 
-#define BUFSIZE 512
 #ifndef DEBUG
     #define DEBUG 0
 #endif
+
+int saved_in, saved_out;
 
 void changeDir(char *path){
     int res = chdir(path);
     if (res==-1) perror("cd failed");
     return;
 }
-
-// sucess: return 0 and info to buf
-// failed: return -1
-int getCurDir(char* buf){
-    if (getcwd(buf, BUFSIZE) == NULL) {
-        // if getcwd gets error
-        perror("getcwd() error");
-        return -1;
-    }
-    return EXIT_SUCCESS;
-};
 
 char* findPath(char* prog_name) {
     bool isPathGiven = false;
@@ -96,14 +86,25 @@ pid_t execProgram(char*** commands, int* idx, int len, int* pd, int lastPipe){
     // Implemented for single command so far
     // TODO: split arguments corresponding each command and execute
     if (strcmp(*prog_args, "pwd") == 0){
-        char buffer[BUFSIZE];
-        int res = getCurDir(buffer);
-        if (res == 0){  
-            nfd = dup2(pd[1], STDOUT_FILENO);
-            if (nfd == -1) {
-                perror(RED "ERROR: write to pipefailed" RESET "\n");
+        char buffer[512];
+        char* res = getcwd(buffer, sizeof(buffer));
+        if (res != NULL){ 
+            if (*idx == (len-1)){
+                if (dup2(saved_out, STDOUT_FILENO) < 0)
+                {
+                    perror("Set stdout to terminal");
+                    return -1;
+                }
+            } 
+            else{
+                nfd = dup2(pd[(*idx)*2 + 1], STDOUT_FILENO);
+                if (nfd == -1) {
+                    perror(RED "ERROR: write to pipefailed" RESET "\n");
+                }
             }
-            int writeBytes = write(STDOUT_FILENO, buffer, BUFSIZE);
+            // add \n to end of char*
+            res[strlen(res)] = '\n';
+            int writeBytes = write(STDOUT_FILENO, res, strlen(res));
             if (writeBytes == -1) {
                 if (DEBUG) printf(RED "Didn't write any byte!!!" RESET "\n");
                 return -1;
@@ -144,7 +145,6 @@ pid_t execProgram(char*** commands, int* idx, int len, int* pd, int lastPipe){
             return -1;
         }
         if (pid == 0) {// we are in the child process
-        
             //Get input from pipeline
             //if not first command.
             if (*idx != 0 && lastPipe >= 0){
@@ -229,6 +229,10 @@ pid_t execProgram(char*** commands, int* idx, int len, int* pd, int lastPipe){
 int execute(char ***commands, int len) {
     if (commands == NULL) return EXIT_SUCCESS;
 
+    // Save initial stdin stdout
+    saved_in = dup(STDIN_FILENO);
+    saved_out = dup(STDOUT_FILENO);
+
     int* pids = malloc(sizeof(int) * 4);
     int pids_count = 0, pids_size = 4;
     int command_iterator = 0;
@@ -248,7 +252,7 @@ int execute(char ***commands, int len) {
             commands[command_iterator][0][0] != '|')
         {
             pid = execProgram(commands, &command_iterator, len, pd, lastWritePipe);                        
-            if (pid >= 0){
+            if (pid > 0){
                 if (pids_count + 1> pids_size){
                     pids_size *= 2;
                     pids = realloc(pids, pids_size);
@@ -285,5 +289,7 @@ int execute(char ***commands, int len) {
             return -1;
         }
     }
+    close(saved_in);
+    close(saved_out);
     return EXIT_SUCCESS;
 }
