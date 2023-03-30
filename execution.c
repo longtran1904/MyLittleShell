@@ -121,6 +121,7 @@ pid_t execProgram(char*** commands, int* idx, int len, int* pd, int lastPipe){
 
     char* filePath = findPath(*prog_args);
     int pid = 0;
+    // printf("len is %d and idx is %d \n", len, *idx);
     if (filePath == NULL) {
         // program not found
         printf("Program %s not found!\n", *prog_args);
@@ -134,11 +135,11 @@ pid_t execProgram(char*** commands, int* idx, int len, int* pd, int lastPipe){
             perror("fork failed");
         }
         if (pid == 0) {// we are in the child process
+        
             //Get input from pipeline
             //if not first command.
             if (*idx != 0 && lastPipe >= 0){
-                if (DEBUG) printf("reading from pipeline[%d]\n", (lastPipe));
-
+                if (DEBUG) printf(YELLOW "reading from pipeline[%d]" RESET "\n", (lastPipe));
                 nfd = dup2(pd[lastPipe], STDIN_FILENO);
                 if (nfd == -1){
                     perror(RED "ERROR: Read from pipeline failed" RESET "\n");
@@ -149,7 +150,7 @@ pid_t execProgram(char*** commands, int* idx, int len, int* pd, int lastPipe){
             //if not last command
             if (*idx < (len-1))
             {
-                if (DEBUG) printf("writing to pipeline[%d]\n", (*idx)*2 + 1);
+                if (DEBUG) printf(YELLOW "writing to pipeline[%d]" RESET "\n", (*idx)*2 + 1);
                 nfd = dup2(pd[(*idx)*2 + 1], STDOUT_FILENO);
                 if (nfd == -1){
                     perror(RED "ERROR: Write to pipeline failed" RESET "\n");
@@ -160,16 +161,16 @@ pid_t execProgram(char*** commands, int* idx, int len, int* pd, int lastPipe){
             for (int i = 0; i < 2*len; i++) close(pd[i]);
 
             // Look for redirection
-            while (len - 1 - *idx > 0 && commands[(*idx+1)][0][0] != '|') {
-                if (commands[*(idx++)][0] != NULL)
+            while (((*idx)+1 < len) && commands[(*idx)+1][0][0] != '|') {
+                if (commands[*(idx)+1][0] != NULL)
                 {
+                    *idx = (*idx) + 1;
                     if (commands[*idx][0][0] == '<')
                     {
                         if (commands[*idx][1] == NULL) {
                             printf(RED "Invalid Redirection Syntax" RESET "\n");
                             exit(EXIT_FAILURE);
                         }
-
                         // Redirect input from a file
                         int fd = open(commands[*idx][1], O_RDONLY);
                         int nfd = dup2(fd, STDIN_FILENO);
