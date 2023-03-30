@@ -174,7 +174,7 @@ pid_t execProgram(char*** commands, int* idx, int len, int* pd, int lastPipe){
                         // Redirect input from a file
                         int fd = open(commands[*idx][1], O_RDONLY);
                         int nfd = dup2(fd, STDIN_FILENO);
-                        if (nfd == -1) printf( RED "ERROR: Redirect input failed" RESET "\n");
+                        if (nfd == -1 && DEBUG) printf( RED "ERROR: Redirect input failed" RESET "\n");
                         close(fd);    
                     }
 
@@ -182,7 +182,7 @@ pid_t execProgram(char*** commands, int* idx, int len, int* pd, int lastPipe){
                     if (commands[*idx][0][0] == '>')
                     {
                         if (commands[*idx][1] == NULL) {
-                            printf(RED "Invalid Redirection Syntax" RESET "\n");
+			    if (DEBUG) printf(RED "Invalid Redirection Syntax" RESET "\n");
                             exit(EXIT_FAILURE);
                         }
 
@@ -236,7 +236,7 @@ int execute(char ***commands, int len) {
                     pids = realloc(pids, pids_size);
                 }
                 lastWritePipe = command_iterator * 2;
-                printf("lastWritePipe value %d\n", lastWritePipe);
+                if (DEBUG) printf("lastWritePipe value %d\n", lastWritePipe);
                 pids[pids_count++] = pid;
             }
         }  
@@ -260,9 +260,9 @@ int execute(char ***commands, int len) {
         }
         if (WIFEXITED(wstatus)){
             // child exited normally
-            printf("\nchild exited with status %d\n", WEXITSTATUS(wstatus));
+            if (DEBUG) printf("\nchild exited with status %d\n", WEXITSTATUS(wstatus));
         }else{
-            printf("\nexited abnormally\n");
+            if (DEBUG) printf("\nexited abnormally\n");
             return -1;
         }
     }
