@@ -57,7 +57,6 @@ void ReadThenWrite(){
 		while (1) { // need loop to make sure commands is large enough
 		    len = tokenize(commands, scale*initCommCapacity, lineBuffer, linePos);
 		    if (len == -1) {
-			if (DEBUG) printf("tokenize failed: invalid command!\n");
 			tokenizeFailed = true;
 		    } else if (len == -2) { // need to resize commands
 			free(commands);
@@ -72,7 +71,7 @@ void ReadThenWrite(){
 		if (!tokenizeFailed) {
 		    if (DEBUG) printCommands(commands, len); 
 
-		    if (strcmp(**commands, "exit") == 0){
+		    if (**commands != NULL && strcmp(**commands, "exit") == 0){
 			printf(RED "Terminating THeShell!" RESET "\n");
 			fflush(stdout);
 			return;

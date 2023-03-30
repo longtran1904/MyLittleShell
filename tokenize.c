@@ -50,11 +50,11 @@ int tokenize(char*** commands, int commCapacity, char* string, int strsize){
 
 	if (wordStart >= strsize){
 	    if (wasRedirect) {
-		if (DEBUG) printf("tokenize error: lone redirect!\n");
+		if (DEBUG) printf("tokenize error: redirect missing args!\n");
 		return -1;
 	    }
 	    if (wasPipe) {
-		if (DEBUG) printf("tokenize error: lone pipe!\n");
+		if (DEBUG) printf("tokenize error: pipe missing args!\n");
 		return -1;
 	    }
 	    if (numRedirectsToSkip > 2) {
@@ -121,13 +121,12 @@ int tokenize(char*** commands, int commCapacity, char* string, int strsize){
 		if (DEBUG) printf("tokenize error: too many redirects!\n");
 		return -1;
 	    }
-	    if (strcmp(commands[j][inner_count-1], "|") == 0) {
+	    if (wasPipe) {
 		if (DEBUG) printf("tokenize error: consecutive pipes!\n");
 		return -1;
 	    }
-	    if ( (strcmp(commands[j][inner_count-1], ">") == 0) || \
-		    strcmp(commands[j][inner_count-1], "<") == 0) {
-		if (DEBUG) printf("tokenize error: redirect immediately before pipe!\n");
+	    if (wasRedirect) {
+		if (DEBUG) printf("tokenize error: pipe immediately after redirect!\n");
 		return -1;
 	    }
 
@@ -223,11 +222,11 @@ int tokenize(char*** commands, int commCapacity, char* string, int strsize){
 	//printf("strsize: %d\n", strsize);
 	if (i >= strsize-1) {
 	    if (wasRedirect) {
-		if (DEBUG) printf("tokenize error: lone redirect!\n");
+		if (DEBUG) printf("tokenize error: redirect missing args!\n");
 		return -1;
 	    }
 	    if (wasPipe) {
-		if (DEBUG) printf("tokenize error: lone pipe!\n");
+		if (DEBUG) printf("tokenize error: pipe missing args!\n");
 		return -1;
 	    }
 	    commands[j][inner_count] = NULL; 
