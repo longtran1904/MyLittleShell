@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
@@ -24,8 +25,9 @@ void append(char *, int);
 void print();
 void printCommands();
 
+//TODO: implement free() for all malloc'ed space
+
 void ReadThenWrite(){
-    int lastCommandFailed = 0;
     int pos;
     char buffer[BUFSIZE];
 
@@ -38,6 +40,8 @@ void ReadThenWrite(){
 	if (DEBUG) printf(YELLOW "Read %d bytes!!" RESET "\n", readBytes);
 	// If a new line, process the line buffer
 	lstart = 0;
+	bool tokenizeFailed = false;
+	bool lastCommandFailed = false;
 	for (pos = 0; pos < readBytes; pos++){
 	    if (buffer[pos] == '\n'){
 		if (pos == 0) break;
@@ -52,7 +56,9 @@ void ReadThenWrite(){
 		int initCommCapacity = (int) (BUFSIZE/sizeof(char***));
 		while (1) { // need loop to make sure commands is large enough
 		    len = tokenize(commands, scale*initCommCapacity, lineBuffer, linePos);
-		    if (len == -1) { // need to resize commands
+		    if (len == -1) {
+			tokenizeFailed = true;
+		    } else if (len == -2) { // need to resize commands
 			free(commands);
 			scale *= 2;
 			commands = malloc(scale*BUFSIZE);
@@ -61,24 +67,26 @@ void ReadThenWrite(){
 		    break;
 		}
 
-		if (DEBUG) printCommands(commands, len); // write words in commands
+		// write words in commands
+		if (!tokenizeFailed) {
+		    if (DEBUG) printCommands(commands, len); 
 
-		execute(commands, len);
-		//TODO: set lastCommandFailed to 1 if any command has non-zero exit status
+		    if (**commands != NULL && strcmp(**commands, "exit") == 0){
+			printf(RED "Terminating THeShell!" RESET "\n");
+			fflush(stdout);
+			return;
+		    }
+		    // execute commands
+		    lastCommandFailed = !execute(commands, len);
+		}
 
 		// reset line buffer
 		lstart = pos + 1;
 		linePos = 0;
-
-		if (strcmp(**commands, "exit") == 0){
-		    printf(RED "Terminating THeShell!" RESET "\n");
-		    fflush(stdout);
-		    return;
-		}
 	    }
 	}
-	if (STDIN_FILENO == 0){
-	    if (lastCommandFailed) printf(RED "!" RESET);
+	if (STDOUT_FILENO == 1){
+	    if (lastCommandFailed || tokenizeFailed) printf(RED "!" RESET);
 	    printf(GREEN "THeshell> " RESET);
 	    fflush(stdout);
 	    continue;
