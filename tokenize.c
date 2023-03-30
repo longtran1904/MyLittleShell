@@ -14,16 +14,23 @@
 #define MAX_ARG_LEN 10
 #define MAX_NUM_FILES 100
 
+// return an array containing all filenames in pwd
 char **getAllFileNames(int *count){
     *count = 0;
     DIR *d;
     struct dirent *dir;
     d = opendir(".");
-    char **allFiles = malloc(MAX_NUM_FILES*sizeof(char**));
+    char **allFiles = malloc(MAX_NUM_FILES*sizeof(char*));
     int allFilesCapacity = MAX_NUM_FILES;
     if (d) {
 	while ((dir = readdir(d)) != NULL) {
 	    // resize allFiles if needed
+	    char *file = malloc(FILENAME_MAX);
+	    strcpy(file, dir->d_name);
+	    if ((strcmp(file, ".")==0) || (strcmp(file, "..")==0)){
+		free(file);
+		continue;
+	    }
 	    if (*count >= allFilesCapacity){
 		allFilesCapacity *= 2;
 		char **res = realloc(allFiles, allFilesCapacity*sizeof(char**)); 
@@ -35,23 +42,59 @@ char **getAllFileNames(int *count){
 		}
 	    }
 
-	    char *file = malloc(FILENAME_MAX);
-	    if (DEBUG) printf("file: %s\n", dir->d_name);
-	    file = dir->d_name;
+	    //if (DEBUG) printf("file_name: %s\tfile_len: %lu\n", file, strlen(file));
 	    allFiles[(*count)++] = file;
 	}
-	allFiles[*count] = NULL;
+	//allFiles[*count] = NULL;
 	closedir(d);
     }
     return allFiles;
 }
 
+// checks if a given string 'word' contains substrings str1, str2
+// as non-overlapping prefix and suffix respectively
+bool checkForMatch(char *word, char *str1, char *str2){
+    if ( (strlen(str2) > strlen(word)) || \
+	    (strlen(str1) > strlen(word)) || \
+	    ((strlen(str1) + strlen(str2)) > strlen(word)) ) {
+	if (DEBUG) printf("filename \"%s\" does NOT match wildcard \"%s*%s\"\n", word, str1, str2);
+	return false;
+    }
+
+    bool prefixMatch = false;
+    bool suffixMatch = false;
+
+    if (str1[0] != '\0') {
+	if (strncmp(word, str1, strlen(str1))==0) prefixMatch = true;
+    } else if (word[0] != '.') {
+	prefixMatch = true;
+    }
+
+    if (str2[0] != '\0') {
+	char *suffix = word + strlen(word) - strlen(str2);
+	/*
+	if (DEBUG) {
+	    printf("word suffix: %s\n", suffix);
+	    printf("strlen(word): %lu\n", strlen(word));
+	    printf("strlen(str2): %lu\n", strlen(str2));
+	}
+	*/
+	if (strncmp(suffix, str2, strlen(str2))==0) suffixMatch = true;
+    } else {
+	suffixMatch = true;
+    }
+    if (prefixMatch && suffixMatch) {
+	if (DEBUG) printf("filename \"%s\" matches wildcard \"%s*%s\"\n", word, str1, str2);
+	return true;
+    } else {
+	if (DEBUG) printf("filename \"%s\" does NOT match wildcard \"%s*%s\"\n", word, str1, str2);
+	return false;
+    }
+
+}
+
 // returns a list of strings of all wildcard matches
 char **findWildCardMatches(char *dir, char *lft, char *rht, int *count){
-    *count = 0;
-    char **files;
-    int num_files = 0;
-    char **matches;
     char buffer[PATH_MAX];
     if (dir != NULL) {
 	// store pwd
@@ -59,18 +102,33 @@ char **findWildCardMatches(char *dir, char *lft, char *rht, int *count){
 	    if (DEBUG) printf("couldn't get pwd!\n");
 	    return NULL;
 	}
-	changeDir(dir);
+	if (chdir(dir)==-1) {
+	    if (DEBUG) printf("invalid directory!\n");
+	    return NULL;
+	}
     }
-    files = getAllFileNames(&num_files);
-    printf("numFiles: %d\n", num_files);
 
+    *count = 0;
+    int num_files = 0;
+    char **files = getAllFileNames(&num_files);
+    char **matches = malloc((num_files+1)*sizeof(char*));
 
-    // TODO: make sure patterns beginning with * (ex. *.txt) don't match with names beginning with .
+    for (int i = 0; i < num_files; i++) {
+	//printf("files[i]: %s\n", files[i]);
+	if (checkForMatch(files[i], lft, rht)) {
+	    char *dst = malloc(strlen(files[i])+1);
+	    strcpy(dst, files[i]);
+	    matches[(*count)++] = dst;
+	    free(files[i]);
+	}
+    }
+    matches[*count] = NULL;
+    free(files);
 
     // cd back to what it was
     if (dir != NULL) changeDir(buffer);
-    // TODO: change to return matches
-    return files;
+    
+    return matches;
 }
 
 // write array of words to commands, return size of commands
@@ -168,9 +226,7 @@ int tokenize(char*** commands, int commCapacity, char* string, int strsize){
 		memcpy(wildcard_rht, word+dir_len+wild_lft_len+1, wild_rht_len);
 		wildcard_rht[wild_rht_len] = '\0';
 
-		if (DEBUG) {
-		    printf("directory containing wildcard filename: %s\n", dir);
-		}
+		if (DEBUG) printf("directory to search: %s\n", dir);
 	    } else {
 		wildcard_lft = malloc(wild_lft_len + 1);
 		memcpy(wildcard_lft, word, wild_lft_len);
