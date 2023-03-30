@@ -104,17 +104,25 @@ pid_t execProgram(char*** commands, int* idx, int len, int* pd, int lastPipe){
                 perror(RED "ERROR: write to pipefailed" RESET "\n");
             }
             int writeBytes = write(STDOUT_FILENO, buffer, BUFSIZE);
-            if (writeBytes == -1) printf(RED "Didn't write any byte!!!" RESET "\n");
+            if (writeBytes == -1) {
+                if (DEBUG) printf(RED "Didn't write any byte!!!" RESET "\n");
+                return -1;
+            }
             else if (DEBUG) printf(YELLOW "Wrote %d bytes!!" RESET "\n", writeBytes);
             close(pd[0]);
             close(pd[1]);
         }
         else {
             printf("pwd failed\n");
+            return -1;
         }
         return 0;
     }
     if (strcmp(*prog_args, "cd") == 0){
+        if (*commands+1 == NULL) {
+            if (DEBUG) printf("Invalid cd argument");
+            return -1;
+        }
         changeDir(*(*commands+1));
         return 0;
     }
@@ -133,6 +141,7 @@ pid_t execProgram(char*** commands, int* idx, int len, int* pd, int lastPipe){
         pid = fork();
         if (pid == -1) { 
             perror("fork failed");
+            return -1;
         }
         if (pid == 0) {// we are in the child process
         
@@ -143,6 +152,7 @@ pid_t execProgram(char*** commands, int* idx, int len, int* pd, int lastPipe){
                 nfd = dup2(pd[lastPipe], STDIN_FILENO);
                 if (nfd == -1){
                     perror(RED "ERROR: Read from pipeline failed" RESET "\n");
+                    return -1;
                 }
             }
 
@@ -154,6 +164,7 @@ pid_t execProgram(char*** commands, int* idx, int len, int* pd, int lastPipe){
                 nfd = dup2(pd[(*idx)*2 + 1], STDOUT_FILENO);
                 if (nfd == -1){
                     perror(RED "ERROR: Write to pipeline failed" RESET "\n");
+                    return -1;
                 }
             }
 
@@ -169,12 +180,15 @@ pid_t execProgram(char*** commands, int* idx, int len, int* pd, int lastPipe){
                     {
                         if (commands[*idx][1] == NULL) {
                             printf(RED "Invalid Redirection Syntax" RESET "\n");
-                            exit(EXIT_FAILURE);
+                            return -1;
                         }
                         // Redirect input from a file
                         int fd = open(commands[*idx][1], O_RDONLY);
                         int nfd = dup2(fd, STDIN_FILENO);
-                        if (nfd == -1) printf( RED "ERROR: Redirect input failed" RESET "\n");
+                        if (nfd == -1) {
+                            if (DEBUG) printf( RED "ERROR: Redirect input failed" RESET "\n");
+                            return -1;
+                        }
                         close(fd);    
                     }
 
@@ -182,14 +196,17 @@ pid_t execProgram(char*** commands, int* idx, int len, int* pd, int lastPipe){
                     if (commands[*idx][0][0] == '>')
                     {
                         if (commands[*idx][1] == NULL) {
-                            printf(RED "Invalid Redirection Syntax" RESET "\n");
-                            exit(EXIT_FAILURE);
+                            if (DEBUG) printf(RED "Invalid Redirection Syntax" RESET "\n");
+                            return -1;
                         }
 
                         // Redirect output to a file
                         int fd = open(commands[*idx][1], O_WRONLY|O_CREAT|O_TRUNC, 0640);
                         int nfd = dup2(fd, STDOUT_FILENO);
-                        if (nfd == -1) printf( RED "ERROR: Redirect output failed" RESET "\n");
+                        if (nfd == -1) {
+                            if (DEBUG) printf( RED "ERROR: Redirect output failed" RESET "\n");
+                            return -1;
+                        }
                         close(fd);
                     }   
                 }
@@ -197,11 +214,12 @@ pid_t execProgram(char*** commands, int* idx, int len, int* pd, int lastPipe){
             // Execute program
             if (execv(filePath, prog_args) < 0){
                 perror("execv failed");
-                exit(0);
+                return -1;
             }
 
             // if we reach here, something went wrong
-            exit(EXIT_FAILURE);
+            // return error flag
+            return -1;
         }
     }
     free(filePath);
@@ -236,7 +254,7 @@ int execute(char ***commands, int len) {
                     pids = realloc(pids, pids_size);
                 }
                 lastWritePipe = command_iterator * 2;
-                printf("lastWritePipe value %d\n", lastWritePipe);
+                if (DEBUG) printf("lastWritePipe value %d\n", lastWritePipe);
                 pids[pids_count++] = pid;
             }
         }  
@@ -257,12 +275,13 @@ int execute(char ***commands, int len) {
         if (clid == -1) // wait failed
         {
             perror("wait failed");
+            return -1;
         }
         if (WIFEXITED(wstatus)){
             // child exited normally
-            printf("\nchild exited with status %d\n", WEXITSTATUS(wstatus));
+            if (DEBUG) printf("\nchild exited with status %d\n", WEXITSTATUS(wstatus));
         }else{
-            printf("\nexited abnormally\n");
+            if (DEBUG) printf("\nexited abnormally\n");
             return -1;
         }
     }
