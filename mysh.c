@@ -74,7 +74,7 @@ void ReadThenWrite(){
 		    if (**commands != NULL && strcmp(**commands, "exit") == 0){
 			printf(RED "Terminating THeShell!" RESET "\n");
 			fflush(stdout);
-			return;
+			exit(EXIT_SUCCESS);
 		    }
 		    // execute commands
 		    lastCommandFailed = execute(commands, len);
