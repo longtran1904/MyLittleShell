@@ -13,6 +13,9 @@
 #endif
 #define MAX_ARG_LEN 10
 #define MAX_NUM_FILES 100
+#ifndef PATH_MAX
+#define PATH_MAX 1024
+#endif
 
 // return an array containing all filenames in pwd
 char **getAllFileNames(int *count){
@@ -96,6 +99,7 @@ bool checkForMatch(char *word, char *str1, char *str2){
 // returns a list of strings of all wildcard matches
 char **findWildCardMatches(char *dir, char *lft, char *rht, int *count){
     char buffer[PATH_MAX];
+	memset(buffer, 0, sizeof(buffer));
     if (dir != NULL) {
 	// store pwd
 	if (getcwd(buffer, PATH_MAX) == NULL) {
