@@ -126,8 +126,13 @@ char **findWildCardMatches(char *dir, char *lft, char *rht, int *count){
     free(files);
 
     // cd back to what it was
-    if (dir != NULL) changeDir(buffer);
-    
+    if (dir != NULL) { 
+	if (chdir(dir)==-1) {
+	    if (DEBUG) printf("invalid directory!\n");
+	    return NULL;
+	}
+    }
+
     return matches;
 }
 
@@ -202,6 +207,20 @@ int tokenize(char*** commands, int commCapacity, char* string, int strsize){
 	word = malloc(wordLen + 1);
 	memcpy(word, string + wordStart, wordLen);
 	word[wordLen] = '\0';
+
+	if (j==0 && inner_count==0 && word[0]=='*') {
+	    if (DEBUG) printf("tokenize error: command begins with wildcard!\n");
+	    return -1;
+	}
+
+	if (word[0]=='~' && word[1]=='/') {
+	    char *home = getenv("HOME");
+	    char *dst = malloc(sizeof(word) + strlen(home));
+	    strcpy(dst, home);
+	    strcpy(dst + strlen(home), word+1); 
+	    word = dst;
+	    if (DEBUG) printf("HOME dir called: %s\n", word);
+	}
 
 	char **matches = NULL;
 	int num_matches = 0;
