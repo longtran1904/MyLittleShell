@@ -179,7 +179,7 @@ void setupInputOutput(int argc, char** argv){
 	}
     close(fd);
 	// open output
-	fd = open("output.txt", O_RDWR | O_CREAT | O_TRUNC, S_IRWXU);
+	fd = open("output.txt", O_RDWR | O_CREAT | O_TRUNC, 0000700);
 	if (fd == -1){
 	    perror("output.txt");
 	    exit(EXIT_FAILURE);

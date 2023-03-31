@@ -5,6 +5,8 @@
 #include<sys/stat.h>
 #include<stdbool.h>
 #include <fcntl.h>
+#include<sys/wait.h>
+
 
 #define RESET   "\033[0m"
 #define RED     "\033[31m"      /* Red */
@@ -72,7 +74,7 @@ char* findPath(char* prog_name) {
     return filePath;
 }
 
-pid_t execProgram(char*** commands, int* idx, int len, int* pd, int lastPipe){
+int execProgram(char*** commands, int* idx, int len, int* pd, int lastPipe){
     // Create a child process
     char** prog_args = commands[*idx];
     int nfd;
