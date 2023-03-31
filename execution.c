@@ -81,6 +81,7 @@ pid_t execProgram(char*** commands, int* idx, int len, int* pd, int lastPipe){
     // TODO: split arguments corresponding each command and execute
     if (strcmp(*prog_args, "pwd") == 0){
         char buffer[512];
+        memset(buffer, 0, sizeof(buffer));
         char* res = getcwd(buffer, sizeof(buffer));
         if (res != NULL){ 
             if (*idx == (len-1)){
@@ -146,9 +147,7 @@ pid_t execProgram(char*** commands, int* idx, int len, int* pd, int lastPipe){
                 return -1;
             }
             else if (DEBUG) printf(YELLOW "Wrote %d bytes!!" RESET "\n", writeBytes);
-            memset(buffer,0, sizeof(buffer));
-            //close all pipes;
-            //for (int i = 0; i < 2*len; i++) close(pd[i]);
+            //memset(buffer,0, sizeof(buffer));
         }
         else {
             printf("pwd failed\n");
@@ -167,10 +166,14 @@ pid_t execProgram(char*** commands, int* idx, int len, int* pd, int lastPipe){
         }
         return 0;
     }
-    if (strcmp(*prog_args, "cd") == 0){
-        if (*commands+1 == NULL) {
-            if (DEBUG) printf("Invalid cd argument");
-            return -1;
+    if (strcmp(*prog_args, "cd") == 0){   
+        if (*(*commands+1) == NULL) {
+            char* home = getenv("HOME");
+            if (chdir(home) != 0){
+                perror("cd");
+                return -1;
+            }
+            return 0;
         }
         if (*(*commands+2) != NULL) {
             printf(RED "Invalid cd arguments" RESET "\n");
