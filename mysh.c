@@ -32,7 +32,7 @@ void ReadThenWrite(){
     char buffer[BUFSIZE];
 
     int readBytes, lstart = 0; // lstart to calculate len of each line
-    if (STDIN_FILENO == 0){
+    if (isatty(STDIN_FILENO)){
 	printf(GREEN "THeshell> " RESET);
 	fflush(stdout);
     }
@@ -69,6 +69,7 @@ void ReadThenWrite(){
 
 		// write words in commands
 		if (!tokenizeFailed) {
+			printf("printing commands\n");
 		    if (DEBUG) printCommands(commands, len); 
 
 		    if (**commands != NULL && strcmp(**commands, "exit") == 0){
@@ -87,7 +88,7 @@ void ReadThenWrite(){
 		linePos = 0;
 	    }
 	}
-	if (STDOUT_FILENO == 1){
+	if (isatty(STDOUT_FILENO)){
 	    if (lastCommandFailed || tokenizeFailed) printf(RED "!" RESET);
 	    printf(GREEN "THeshell> " RESET);
 	    fflush(stdout);
@@ -102,7 +103,6 @@ void ReadThenWrite(){
     if (linePos > 0){
 	// file ended with partial line
 	append("\n",1);
-	print();
 	linePos = 0;
     }
 }
@@ -175,7 +175,7 @@ void setupInputOutput(int argc, char** argv){
 	    perror(dname);
 	    exit(EXIT_FAILURE);
 	} else {
-        nfd = dup2(fd, STDOUT_FILENO);
+        nfd = dup2(fd, STDIN_FILENO);
         if (nfd == -1) printf(RED "ERROR: assigning STDOUT_FILENO failed" RESET "\n");
 	    if (DEBUG) printf(YELLOW "Successfully opened %s" RESET "\n", dname); 
 	}
