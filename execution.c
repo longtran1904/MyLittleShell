@@ -204,7 +204,6 @@ pid_t execProgram(char*** commands, int* idx, int len, int* pd, int lastPipe){
         if (pid == 0) {// we are in the child process
             //Get input from pipeline
             //if not first command.
-            printf("Entering child process\n");
             if (*idx != 0 && lastPipe >= 0){
                 if (DEBUG) printf(YELLOW "reading from pipeline[%d]" RESET "\n", (lastPipe));
                 nfd = dup2(pd[lastPipe], STDIN_FILENO);
