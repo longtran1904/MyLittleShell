@@ -12,7 +12,7 @@ Julian Herman (netID: jbh113)
 
 ## Our Shell Extensions:
 ### Multiple pipes
-  - Our shell allows user to piping commands as many as user want
+  - Our shell allows user to use as many piping commands as they wish
 
 ### HOME directory
   - Allow user to traverse to HOME directory using `~`
@@ -58,44 +58,59 @@ Julian Herman (netID: jbh113)
         ### Infinite Arguments
         6. `echo hello world this is a very very long sentence and it aims to have infinite length`
 
-    - Being able to identify argument list for each command in pipeline.
-        7. `echo shell should recognize this sentence as argument list | wc`
-        8. `ls -l | grep "file"` -> expected SUCCESS: -l is argument of ls, "file" is argument of grep
+	    - Being able to identify argument list for each command in pipeline.
+	        7. `echo shell should recognize this sentence as argument list | wc`
+	        8. `ls -l | grep "file"` -> expected SUCCESS: -l is argument of ls, "file" is argument of grep
+	
+	  - Redirections: 
+		    - Redirection token is recognized without space
+		      -  `echo hello world>echo.txt`
+		      -  `wc<filename1`
+		      -  `wc<filename1>wc.txt`
+		        -> Expected wc counts words in filename1 and write to wc.txt
+		    - Redirection token and its input/output token can be placed anywhere in command line.
+		      - `echo hello this is a > echo.txt sentence from echo.`
+		      - `echo > echo.txt this is a sentence.`
+		      - `echo this is a sentence > echo.txt`
+	
+	      
+	  - Pipes (Multiple pipes):
+		      - Pipes still work even though second command doesn't use input from first command
+	         - `echo hello world | ls`
+	      - Pipes still work even though first command write nothing, and second command use input from pipe
+	         - `cd .. | wc`  
+	
+	      - Two Pipes
+	         - `ls -l | grep "file" | wc`
+	         - `ls -l | grep "e" | awk '{print $9}' | wc`
+     - Home Directory
+    	 - the user can include `~/` at anypoint in their commands and it will be replaced with their home directory
+		     -  ` ~/command1 < input | command2 > output`
+		     -  ` command1 < ~/input | ~/command2 > output`
+     -  Wildcards
+    	 -  the user can include wildcards anywhere in a command (even if the token is a path, in which case, the token will be replaced by everything matching the wildcard in said path)
+     			-  ` command1 < foo*bar star | ~/command2 > output`
+     			-  ` command1 < command2 jar |  car foo*bar > output`
+ 			-  wildcards can be combined with home dir symbol `~/`
+ 				-  ` ~/command1 < foo*bar star | ~/command2 > output`
 
-  - Redirections: 
-    - Redirection token is recognized without space
-      1.  `echo hello world>echo.txt`
-      2.  `wc<filename1`
-      3.  `wc<filename1>wc.txt`
-        -> Expected wc counts words in filename1 and write to wc.txt
-    - Redirection token and its input/output token can be placed anywhere in command line.
-      1. `echo hello this is a > echo.txt sentence from echo.`
-      2. `echo > echo.txt this is a sentence.`
-      3. `echo this is a sentence > echo.txt`
-
-    - Errors Detected:
-      * no token after redirection
+  - Errors Detected:
+      * lone redirections and lone pipes
+      1. `>`
+      2. `|`
+      * no token after redirection or after / before pipe
       1. `echo >` 
       2. `echo <`
-      3. `echo <<`
-      4. `echo >>`
-      5. `echo > |`
-      6. `echo < |`
+      3. `echo |`
+      4. `| echo`
+      * adjacent pipe and redirection tokens
+      1. `echo <<`
+      2. `echo >>`
+      3. `echo >|`
+      4. `echo |<`
 
-      * Multiple redirections
-      1. `echo >echo1.txt >echo2.txt` ----- HEY JULIAN, PLEASE CONFIRM THIS
-      2. `wc <filename1 <filename2` --- Ambiguous Inputs
+      * Multiple redirections: uses last one found
+      1. `echo >echo1.txt >echo2.txt` uses >echo2.txt
+      2. `wc <filename1 <filename2` uses <filename2
       3. `wc <filename1 >wc.txt <filename2`
       4. `wc <filename1 >wc.txt >wc2.txt`
-
-
-    - Pipes (Multiple pipes):
-      1. Pipes still work even though second command doesn't use input from first command
-         - `echo hello world | ls`
-      2. Pipes still work even though first command write nothing, and second command use input from pipe
-         - `cd .. | wc`  
-
-      3. Two Pipes
-         - `ls -l | grep "file" | wc`
-         - `ls -l | grep "e" | awk '{print $9}' | wc`
-

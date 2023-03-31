@@ -69,7 +69,7 @@ void ReadThenWrite(){
 
 		// write words in commands
 		if (!tokenizeFailed) {
-			printf("printing commands\n");
+		    if (DEBUG) printf("printing commands\n");
 		    if (DEBUG) printCommands(commands, len); 
 
 		    if (**commands != NULL && strcmp(**commands, "exit") == 0){
