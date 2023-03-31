@@ -77,7 +77,7 @@ void ReadThenWrite(){
 			return;
 		    }
 		    // execute commands
-		    lastCommandFailed = !execute(commands, len);
+		    lastCommandFailed = execute(commands, len);
 		}
 
 		// reset line buffer

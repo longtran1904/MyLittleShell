@@ -17,10 +17,13 @@
 
 int saved_in, saved_out;
 
-void changeDir(char *path){
+int changeDir(char *path){
     int res = chdir(path);
-    if (res==-1) perror("cd failed");
-    return;
+    if (res==-1) {
+	perror("cd failed");
+	return -1;
+    }
+    return 0;
 }
 
 char* findPath(char* prog_name) {
