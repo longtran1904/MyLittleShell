@@ -215,10 +215,15 @@ int tokenize(char*** commands, int commCapacity, char* string, int strsize){
 
 	if (word[0]=='~' && word[1]=='/') {
 	    char *home = getenv("HOME");
-	    char *dst = malloc(sizeof(word) + strlen(home));
+	    char *dst = malloc(strlen(word) + 1 + strlen(home));
 	    strcpy(dst, home);
 	    strcpy(dst + strlen(home), word+1); 
 	    word = dst;
+	    if (containsWildcard) {
+		last_slash = last_slash + strlen(home) - 1;
+		wildcard_pos = wildcard_pos + strlen(home) - 1;
+		wordEnd = wordEnd + strlen(home) - 1;
+	    }
 	    if (DEBUG) printf("HOME dir called: %s\n", word);
 	}
 
@@ -241,7 +246,7 @@ int tokenize(char*** commands, int commCapacity, char* string, int strsize){
 		memcpy(wildcard_lft, word+dir_len, wild_lft_len);
 		wildcard_lft[wild_lft_len] = '\0';
 
-		wildcard_rht= malloc(wild_rht_len + 1);
+		wildcard_rht = malloc(wild_rht_len + 1);
 		memcpy(wildcard_rht, word+dir_len+wild_lft_len+1, wild_rht_len);
 		wildcard_rht[wild_rht_len] = '\0';
 
@@ -251,7 +256,7 @@ int tokenize(char*** commands, int commCapacity, char* string, int strsize){
 		memcpy(wildcard_lft, word, wild_lft_len);
 		wildcard_lft[wild_lft_len] = '\0';
 
-		wildcard_rht= malloc(wild_rht_len + 1);
+		wildcard_rht = malloc(wild_rht_len + 1);
 		memcpy(wildcard_rht, word+wild_lft_len+1, wild_rht_len);
 		wildcard_rht[wild_rht_len] = '\0';
 	    }
