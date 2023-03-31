@@ -349,6 +349,7 @@ int execute(char ***commands, int len) {
             return -1;
         }
     }
+    free(pids);
     close(saved_in);
     close(saved_out);
     return EXIT_SUCCESS;

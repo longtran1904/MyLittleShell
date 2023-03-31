@@ -80,6 +80,8 @@ void ReadThenWrite(){
 		    lastCommandFailed = execute(commands, len);
 		}
 
+		// free up pointers
+		free(commands);
 		// reset line buffer
 		lstart = pos + 1;
 		linePos = 0;
